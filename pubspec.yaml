@@ -1,0 +1,30 @@
+name: voucher_claim
+description: "A new Flutter project."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.6
+  mysql1: ^0.20.0
+  intl: ^0.18.0
+  qr_flutter: ^4.1.0
+  cupertino_icons: ^1.0.8
+  flutter_dotenv: ^6.0.0
+  esc_pos_utils: ^1.1.0
+  shared_preferences: ^2.2.2
+  window_manager: ^0.3.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
