@@ -116,23 +116,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _applyFilters() {
+  void _applyFilters({bool resetPage = true}) {
+    final nextFiltered = transactions.where((t) {
+      final status = getClaimStatus(t);
+
+      final matchesSearch =
+          t.counter.toString().toLowerCase().contains(searchQuery) ||
+              t.areaName.toLowerCase().contains(searchQuery) ||
+              t.tableName.toLowerCase().contains(searchQuery);
+
+      final matchesStatus = selectedStatus == 'All' || status == selectedStatus;
+
+      return matchesSearch && matchesStatus;
+    }).toList();
+
+    final maxPage = nextFiltered.isEmpty
+        ? 0
+        : ((nextFiltered.length - 1) ~/ rowsPerPage);
+    final nextPage = resetPage ? 0 : currentPage.clamp(0, maxPage);
+
     setState(() {
-      filteredTransactions = transactions.where((t) {
-        final status = getClaimStatus(t);
-
-        final matchesSearch =
-            t.counter.toString().toLowerCase().contains(searchQuery) ||
-                t.areaName.toLowerCase().contains(searchQuery) ||
-                t.tableName.toLowerCase().contains(searchQuery);
-
-        final matchesStatus =
-            selectedStatus == 'All' || status == selectedStatus;
-
-        return matchesSearch && matchesStatus;
-      }).toList();
-
-      currentPage = 0;
+      filteredTransactions = nextFiltered;
+      currentPage = nextPage;
     });
   }
 
@@ -182,8 +187,6 @@ class _HomePageState extends State<HomePage> {
           selectedStatus = 'All';
         }
 
-        _applyFilters();
-
         if (trx.isEmpty) {
           selectedTransaction = null;
         } else if (currentSelectedId != null) {
@@ -196,6 +199,8 @@ class _HomePageState extends State<HomePage> {
           selectedTransaction = trx.first;
         }
       });
+
+      _applyFilters(resetPage: !silent);
     } catch (e) {
       if (!mounted) return;
 
