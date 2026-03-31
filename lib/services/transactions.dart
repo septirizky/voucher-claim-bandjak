@@ -1,12 +1,17 @@
 import '../models/transaction.dart';
 import '../config/db.dart';
+import 'claim_compare_config_service.dart';
 
 class TransactionRepository {
   Future<List<TransactionModel>> getTransactionsByDate(
     double minSpend,
     String date,
+    String compareBasis,
   ) async {
     final conn = await MySqlService.connect();
+    final thresholdColumn = compareBasis == ClaimCompareConfigService.subtotal
+        ? 's.is_total_before_disc'
+        : 's.is_total';
 
     try {
       final results = await conn.query('''
@@ -48,7 +53,7 @@ class TransactionRepository {
         JOIN branch b ON b.br_id = s.br_id
         LEFT JOIN tables_area ta ON ta.ta_id = s.ta_id
         LEFT JOIN tables t ON t.t_id = s.t_id
-        WHERE s.is_total > ?
+        WHERE $thresholdColumn > ?
           AND s.is_date = ?
           AND s.is_status = 'Active'
         ORDER BY s.is_id DESC
@@ -92,11 +97,12 @@ class TransactionRepository {
   /// OPTIONAL: biar backward compatible
   Future<List<TransactionModel>> getTransactionsToday(
     double minSpend,
+    String compareBasis,
   ) async {
     final today = DateTime.now();
     final date =
         "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
-    return getTransactionsByDate(minSpend, date);
+    return getTransactionsByDate(minSpend, date, compareBasis);
   }
 }

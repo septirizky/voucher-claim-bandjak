@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:voucher_claim/models/voucher_claim.dart';
-import 'package:voucher_claim/pages/printer_settings_page.dart';
+import 'package:voucher_claim/pages/settings_page.dart';
 import 'package:voucher_claim/services/branch.dart';
+import 'package:voucher_claim/services/claim_compare_config_service.dart';
 import '../services/transactions.dart';
 import '../services/voucher_claim.dart';
 import '../models/transaction.dart';
@@ -130,9 +131,8 @@ class _HomePageState extends State<HomePage> {
       return matchesSearch && matchesStatus;
     }).toList();
 
-    final maxPage = nextFiltered.isEmpty
-        ? 0
-        : ((nextFiltered.length - 1) ~/ rowsPerPage);
+    final maxPage =
+        nextFiltered.isEmpty ? 0 : ((nextFiltered.length - 1) ~/ rowsPerPage);
     final nextPage = resetPage ? 0 : currentPage.clamp(0, maxPage);
 
     setState(() {
@@ -164,12 +164,13 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final branchSpend = await BranchService.getBranchSpend();
+      final compareBasis = await ClaimCompareConfigService.getBasis();
 
       final currentSelectedId = selectedTransaction?.isId;
       final currentBranchCode = selectedTransaction?.branchCode;
 
       final results = await Future.wait([
-        repo.getTransactionsByDate(branchSpend, selectedDate),
+        repo.getTransactionsByDate(branchSpend, selectedDate, compareBasis),
         VoucherClaimService.fetchClaimStatusMap(),
       ]);
 
