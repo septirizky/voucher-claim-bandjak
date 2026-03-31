@@ -214,23 +214,24 @@ class _QrPreviewCardState extends State<QrPreviewCard> {
 
                               widget.onSuccess();
                             } catch (e) {
-                              if (e.toString().contains("ALREADY_CLAIMED")) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        "Voucher sudah dikirim dari laptop lain"),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
+                              final isApiError =
+                                  e is VoucherClaimApiException;
+                              final errorMessage = isApiError
+                                  ? e.message
+                                  : e.toString().replaceFirst('Exception: ', '');
 
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: isApiError &&
+                                          e.statusCode == 409
+                                      ? Colors.orange
+                                      : Colors.red,
+                                ),
+                              );
+
+                              if (isApiError && e.statusCode == 409) {
                                 widget.onSuccess();
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Gagal: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
                               }
                             } finally {
                               if (mounted) {

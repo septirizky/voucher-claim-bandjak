@@ -4,6 +4,19 @@ import 'package:http/http.dart' as http;
 import '../models/transaction.dart';
 import '../models/voucher_claim.dart';
 
+class VoucherClaimApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  VoucherClaimApiException({
+    required this.statusCode,
+    required this.message,
+  });
+
+  @override
+  String toString() => message;
+}
+
 class VoucherClaimService {
   static String get baseUrl => dotenv.env['API']!;
 
@@ -18,12 +31,24 @@ class VoucherClaimService {
       body: jsonEncode(payload),
     );
 
-    if (response.statusCode == 409) {
-      throw Exception("ALREADY_CLAIMED");
-    }
-
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception(response.body);
+      String errorMessage = 'Request failed (${response.statusCode})';
+
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic> && body['message'] != null) {
+          errorMessage = body['message'].toString();
+        }
+      } catch (_) {
+        if (response.body.isNotEmpty) {
+          errorMessage = response.body;
+        }
+      }
+
+      throw VoucherClaimApiException(
+        statusCode: response.statusCode,
+        message: errorMessage,
+      );
     }
   }
 
