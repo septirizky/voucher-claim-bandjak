@@ -484,9 +484,9 @@ class _HomePageState extends State<HomePage> {
                     },
                     cells: [
                       DataCell(
-                          SizedBox(width: 50, child: Text(t.isId.toString()))),
+                          SizedBox(width: 55, child: Text(t.isId.toString()))),
                       DataCell(SizedBox(
-                          width: 50, child: Text(t.counter.toString()))),
+                          width: 55, child: Text(t.counter.toString()))),
                       DataCell(SizedBox(
                           width: 120,
                           child: Text(
