@@ -214,23 +214,22 @@ class _QrPreviewCardState extends State<QrPreviewCard> {
 
                               widget.onSuccess();
                             } catch (e) {
-                              final isApiError =
-                                  e is VoucherClaimApiException;
-                              final errorMessage = isApiError
-                                  ? e.message
-                                  : e.toString().replaceFirst('Exception: ', '');
+                              final apiError = e is VoucherClaimApiException
+                                  ? e
+                                  : null;
+                              final errorMessage = apiError?.message ??
+                                  e.toString().replaceFirst('Exception: ', '');
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(errorMessage),
-                                  backgroundColor: isApiError &&
-                                          e.statusCode == 409
+                                  backgroundColor: apiError?.statusCode == 409
                                       ? Colors.orange
                                       : Colors.red,
                                 ),
                               );
 
-                              if (isApiError && e.statusCode == 409) {
+                              if (apiError?.statusCode == 409) {
                                 widget.onSuccess();
                               }
                             } finally {

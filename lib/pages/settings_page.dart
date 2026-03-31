@@ -28,6 +28,18 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
 
   Timer? _refreshTimer;
 
+  bool get isSelectedPrinterOffline {
+    if (selectedPrinter == null) return false;
+    PrinterInfo? info;
+    for (final p in printers) {
+      if (p.name == selectedPrinter) {
+        info = p;
+        break;
+      }
+    }
+    return info?.status == 'Offline';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -73,7 +85,7 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
         'powershell',
         [
           '-Command',
-          r'Get-Printer | Select Name, PrinterStatus | ConvertTo-Json'
+          r'Get-CimInstance Win32_Printer | Select Name, PrinterStatus, WorkOffline, ExtendedPrinterStatus, DetectedErrorState, Status | ConvertTo-Json -Depth 3'
         ],
       );
 
@@ -104,14 +116,7 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
       }).toList();
 
       final printerInfos = filtered.map<PrinterInfo>((p) {
-        final statusCode = p['PrinterStatus'];
-
-        String status;
-        if (statusCode == 7) {
-          status = 'Offline';
-        } else {
-          status = 'Online';
-        }
+        final status = _resolvePrinterStatus(p);
 
         return PrinterInfo(p['Name'], status);
       }).toList();
@@ -123,6 +128,34 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
     } catch (_) {
       setState(() => isLoading = false);
     }
+  }
+
+  String _resolvePrinterStatus(dynamic printer) {
+    final workOfflineRaw = printer['WorkOffline'];
+    final printerStatusRaw = printer['PrinterStatus'];
+    final extendedStatusRaw = printer['ExtendedPrinterStatus'];
+    final detectedErrorStateRaw = printer['DetectedErrorState'];
+    final statusTextRaw = printer['Status'];
+
+    final isWorkOffline = workOfflineRaw == true ||
+        workOfflineRaw?.toString().toLowerCase() == 'true';
+
+    final printerStatusText = printerStatusRaw?.toString().toLowerCase() ?? '';
+    final statusCode = int.tryParse(printerStatusRaw?.toString() ?? '');
+    final extendedStatusCode =
+        int.tryParse(extendedStatusRaw?.toString() ?? '');
+    final detectedErrorStateCode =
+        int.tryParse(detectedErrorStateRaw?.toString() ?? '');
+    final statusText = statusTextRaw?.toString().toLowerCase() ?? '';
+
+    final isOffline = isWorkOffline ||
+        statusCode == 7 ||
+        printerStatusText.contains('offline') ||
+        extendedStatusCode == 7 ||
+        statusText.contains('offline') ||
+        (detectedErrorStateCode != null && detectedErrorStateCode != 0);
+
+    return isOffline ? 'Offline' : 'Online';
   }
 
   Future<void> _savePrinter() async {
@@ -143,6 +176,16 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
     if (selectedPrinter == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pilih printer terlebih dahulu')),
+      );
+      return;
+    }
+
+    if (isSelectedPrinterOffline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Printer offline. Test print dibatalkan.'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -262,7 +305,9 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _testPrint,
+                              onPressed: isSelectedPrinterOffline
+                                  ? null
+                                  : _testPrint,
                               icon: const Icon(Icons.play_arrow_rounded),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
